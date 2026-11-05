@@ -1,7 +1,7 @@
 
 
-from fastapi import FastAPI
-
+from fastapi import FastAPI, HTTPException
+from datetime import datetime, timezone
 app = FastAPI(
     title="BBDS - Bağımsız Bilimsel Denetim Sistemi",
     version="3.0"
@@ -47,3 +47,27 @@ def protocol():
 @app.get("/audit-statuses")
 def audit_statuses():
     return {"statuses": AUDIT_STATUSES}
+
+audit_records = []
+
+@app.post("/audit-records")
+def create_audit_record(record: dict):
+    if record.get("durum") not in AUDIT_STATUSES:
+        raise HTTPException(
+            status_code=422,
+            detail="Geçersiz denetim durumu"
+        )
+
+    new_record = record.copy()
+    new_record["olusturma_tarihi"] = datetime.now(timezone.utc).isoformat()
+    audit_records.append(new_record)
+
+    return {
+        "message": "Denetim kaydı oluşturuldu",
+        "record": new_record
+    }
+
+
+@app.get("/audit-records")
+def list_audit_records():
+    return {"records": audit_records}
