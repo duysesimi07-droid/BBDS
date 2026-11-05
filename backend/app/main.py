@@ -1,7 +1,8 @@
 
-
 from fastapi import FastAPI, HTTPException
 from datetime import datetime, timezone
+from pydantic import BaseModel, Field
+
 app = FastAPI(
     title="BBDS - Bağımsız Bilimsel Denetim Sistemi",
     version="3.0"
@@ -15,6 +16,13 @@ AUDIT_STATUSES = [
     "DENETİM TAMAMLANMADI"
 ]
 
+
+class AuditRecord(BaseModel):
+    kayit_id: str = Field(..., min_length=1, max_length=100)
+    durum: str
+    aciklama: str = Field(..., min_length=1, max_length=2000)
+
+
 @app.get("/")
 def home():
     return {
@@ -23,9 +31,11 @@ def home():
         "status": "running"
     }
 
+
 @app.get("/health")
 def health():
     return {"status": "healthy"}
+
 
 @app.get("/protocol")
 def protocol():
@@ -44,21 +54,24 @@ def protocol():
         ]
     }
 
+
 @app.get("/audit-statuses")
 def audit_statuses():
     return {"statuses": AUDIT_STATUSES}
 
+
 audit_records = []
 
+
 @app.post("/audit-records")
-def create_audit_record(record: dict):
-    if record.get("durum") not in AUDIT_STATUSES:
+def create_audit_record(record: AuditRecord):
+    if record.durum not in AUDIT_STATUSES:
         raise HTTPException(
             status_code=422,
             detail="Geçersiz denetim durumu"
         )
 
-    new_record = record.copy()
+    new_record = record.model_dump()
     new_record["olusturma_tarihi"] = datetime.now(timezone.utc).isoformat()
     audit_records.append(new_record)
 
@@ -71,3 +84,4 @@ def create_audit_record(record: dict):
 @app.get("/audit-records")
 def list_audit_records():
     return {"records": audit_records}
+
