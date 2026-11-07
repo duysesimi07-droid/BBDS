@@ -196,7 +196,25 @@ class AuditRecord(BaseModel):
         min_length=1,
         max_length=2000
     )
+    
+class EvaluatorDecision(BaseModel):
+    id: str = Field(..., min_length=1, max_length=100)
 
+    kayit_id: str = Field(..., min_length=1, max_length=100)
+
+    degerlendirici_id: str
+
+    karar: str
+
+    kanit: str | None = None
+
+    gerekce: str = Field(..., min_length=1, max_length=5000)
+
+    guven_duzeyi: str | None = None
+
+    protokol_versiyonu: str
+
+    kod_kitabi_versiyonu: str
 
 # --------------------------------------------------
 # ANA UÇ NOKTALAR
