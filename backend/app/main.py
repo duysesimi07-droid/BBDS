@@ -11,7 +11,9 @@ from sqlalchemy import (
     String,
     Text,
     DateTime,
-    select
+    select,
+    ForeignKey,
+    UniqueConstraint
 )
 from sqlalchemy.orm import (
     DeclarativeBase,
@@ -96,7 +98,67 @@ class AuditRecordDB(Base):
         DateTime(timezone=True),
         nullable=False
     )
+class EvaluatorDecisionDB(Base):
+    __tablename__ = "evaluator_decisions"
 
+    __table_args__ = (
+        UniqueConstraint(
+            "kayit_id",
+            "degerlendirici_id",
+            name="uq_evaluator_record_evaluator"
+        ),
+    )
+
+    id: Mapped[str] = mapped_column(
+        String(100),
+        primary_key=True
+    )
+
+    kayit_id: Mapped[str] = mapped_column(
+        String(100),
+        ForeignKey("audit_records.kayit_id"),
+        nullable=False
+    )
+
+    degerlendirici_id: Mapped[str] = mapped_column(
+        String(1),
+        nullable=False
+    )
+
+    karar: Mapped[str] = mapped_column(
+        String(30),
+        nullable=False
+    )
+
+    kanit: Mapped[str | None] = mapped_column(
+        Text,
+        nullable=True
+    )
+
+    gerekce: Mapped[str] = mapped_column(
+        Text,
+        nullable=False
+    )
+
+    guven_duzeyi: Mapped[str | None] = mapped_column(
+        String(20),
+        nullable=True
+    )
+
+    protokol_versiyonu: Mapped[str] = mapped_column(
+        String(50),
+        nullable=False
+    )
+
+    kod_kitabi_versiyonu: Mapped[str] = mapped_column(
+        String(50),
+        nullable=False
+    )
+
+    karar_tarihi: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        nullable=False
+    )
 
 @app.on_event("startup")
 def startup():
