@@ -342,3 +342,113 @@ def list_audit_records():
 
     finally:
         db.close()
+# --------------------------------------------------
+# BAĞIMSIZ DEĞERLENDİRİCİ KARARI OLUŞTURMA
+# --------------------------------------------------
+
+EVALUATOR_DECISIONS = [
+    "VAR",
+    "YOK",
+    "KANIT_YETERSIZ",
+    "UYGULANAMAZ",
+    "INCELENMEDI"
+]
+
+CONFIDENCE_LEVELS = [
+    "YÜKSEK",
+    "ORTA",
+    "DÜŞÜK"
+]
+
+
+@app.post("/evaluator-decisions")
+def create_evaluator_decision(decision: EvaluatorDecision):
+
+    if decision.degerlendirici_id not in ["A", "B"]:
+        raise HTTPException(
+            status_code=422,
+            detail="Değerlendirici kimliği A veya B olmalıdır."
+        )
+
+    if decision.karar not in EVALUATOR_DECISIONS:
+        raise HTTPException(
+            status_code=422,
+            detail="Geçersiz değerlendirme kararı."
+        )
+
+    if (
+        decision.guven_duzeyi is not None
+        and decision.guven_duzeyi not in CONFIDENCE_LEVELS
+    ):
+        raise HTTPException(
+            status_code=422,
+            detail="Geçersiz güven düzeyi."
+        )
+
+    if decision.karar in ["VAR", "YOK"]:
+        if not decision.kanit or not decision.kanit.strip():
+            raise HTTPException(
+                status_code=422,
+                detail="VAR ve YOK kararları için kanıt gereklidir."
+            )
+
+    db = SessionLocal()
+
+    try:
+        parent_record = db.get(
+            AuditRecordDB,
+            decision.kayit_id
+        )
+
+        if parent_record is None:
+            raise HTTPException(
+                status_code=404,
+                detail="Ana denetim kaydı bulunamadı."
+            )
+
+        new_decision = EvaluatorDecisionDB(
+            id=decision.id,
+            kayit_id=decision.kayit_id,
+            degerlendirici_id=decision.degerlendirici_id,
+            karar=decision.karar,
+            kanit=decision.kanit,
+            gerekce=decision.gerekce,
+            guven_duzeyi=decision.guven_duzeyi,
+            protokol_versiyonu=decision.protokol_versiyonu,
+            kod_kitabi_versiyonu=decision.kod_kitabi_versiyonu,
+            karar_tarihi=datetime.now(timezone.utc)
+        )
+
+        db.add(new_decision)
+        db.commit()
+        db.refresh(new_decision)
+
+        return {
+            "message": "Bağımsız değerlendirici kararı kaydedildi",
+            "decision": {
+                "id": new_decision.id,
+                "kayit_id": new_decision.kayit_id,
+                "degerlendirici_id": new_decision.degerlendirici_id,
+                "karar": new_decision.karar,
+                "kanit": new_decision.kanit,
+                "gerekce": new_decision.gerekce,
+                "guven_duzeyi": new_decision.guven_duzeyi,
+                "protokol_versiyonu": new_decision.protokol_versiyonu,
+                "kod_kitabi_versiyonu": new_decision.kod_kitabi_versiyonu,
+                "karar_tarihi": new_decision.karar_tarihi.isoformat()
+            }
+        }
+
+    except IntegrityError:
+        db.rollback()
+        raise HTTPException(
+            status_code=409,
+            detail=(
+                "Bu kayıt için aynı değerlendiricinin "
+                "ilk kararı zaten mevcut veya kayıt "
+                "veritabanı kısıtlarına aykırı."
+            )
+        )
+
+    finally:
+        db.close()
