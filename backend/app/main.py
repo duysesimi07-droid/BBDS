@@ -490,3 +490,4 @@ def list_evaluator_decisions(kayit_id: str | None = None):
 
     finally:
         db.close()
+# BBDS değerlendirici kararlarını listeleme
