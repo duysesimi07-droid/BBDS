@@ -452,3 +452,41 @@ def create_evaluator_decision(decision: EvaluatorDecision):
 
     finally:
         db.close()
+
+@app.get("/evaluator-decisions")
+def list_evaluator_decisions(kayit_id: str | None = None):
+
+    db = SessionLocal()
+
+    try:
+        query = select(EvaluatorDecisionDB)
+
+        if kayit_id:
+            query = query.where(
+                EvaluatorDecisionDB.kayit_id == kayit_id
+            )
+
+        decisions = db.scalars(
+            query.order_by(EvaluatorDecisionDB.karar_tarihi.asc())
+        ).all()
+
+        return {
+            "decisions": [
+                {
+                    "id": item.id,
+                    "kayit_id": item.kayit_id,
+                    "degerlendirici_id": item.degerlendirici_id,
+                    "karar": item.karar,
+                    "kanit": item.kanit,
+                    "gerekce": item.gerekce,
+                    "guven_duzeyi": item.guven_duzeyi,
+                    "protokol_versiyonu": item.protokol_versiyonu,
+                    "kod_kitabi_versiyonu": item.kod_kitabi_versiyonu,
+                    "karar_tarihi": item.karar_tarihi.isoformat()
+                }
+                for item in decisions
+            ]
+        }
+
+    finally:
+        db.close()
